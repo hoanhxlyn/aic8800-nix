@@ -6,18 +6,17 @@ Linux kernel driver for AIC8800D80 WiFi 6 chipset with full NixOS support.
 
 This driver supports USB WiFi adapters based on the AIC8800D80 chipset, including:
 
-- **Tenda U11** - USB WiFi 6 adapter
+- **Tenda U11/U11 Prop** - USB WiFi 6 adapter
 - **AX913B** - USB WiFi 6 adapter
 - Other devices using vendor IDs: `3020:*`, `368b:*`, `a69c:8d80`
 
 ## Features
 
-- ✅ WiFi 6 (802.11ax) support
-- ✅ USB interface support
-- ✅ NixOS-native integration
-- ✅ Automatic firmware loading
-- ✅ udev rules for device permissions
-- ❌ Bluetooth not supported
+- [x] WiFi 6 (802.11ax) support
+- [x] USB interface support
+- [x] NixOS-native integration
+- [x] Automatic firmware loading
+- [x] udev rules for device permissions
 
 ## NixOS Installation
 
@@ -48,9 +47,6 @@ Then enable it in your `configuration.nix`:
 ```nix
 {
   hardware.aic8800.enable = true;
-  
-  # Recommended: disable firmware compression for better compatibility
-  hardware.firmwareCompression = "none";
 }
 ```
 
@@ -66,7 +62,6 @@ Clone this repository and import the module:
   ];
 
   hardware.aic8800.enable = true;
-  hardware.firmwareCompression = "none";
 }
 ```
 
@@ -118,16 +113,6 @@ Automatically load the kernel module at boot. Set to `false` if you want to load
    ```bash
    lsusb | grep -i aic
    ```
-
-### Firmware loading errors
-
-If you see firmware loading errors, ensure:
-
-```nix
-hardware.firmwareCompression = "none";
-```
-
-This disables firmware compression which can cause issues with some drivers.
 
 ### Manual module loading
 
@@ -189,14 +174,8 @@ sudo reboot
 ```
 
 ## License
-
 GPL-2.0-only
-
 The driver code is based on the AIC8800 Linux driver from AIC semiconductor.
-
-## Contributing
-
-Issues and pull requests are welcome!
 
 ## Acknowledgments
 
