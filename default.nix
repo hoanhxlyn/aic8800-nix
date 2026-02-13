@@ -5,7 +5,6 @@
   stdenv,
   kernel,
 }:
-
 stdenv.mkDerivation rec {
   pname = "aic8800-driver";
   version = "1.0.0";
@@ -18,10 +17,12 @@ stdenv.mkDerivation rec {
   ];
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
-  makeFlags = kernel.makeFlags ++ [
-    "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
-    "INSTALL_MOD_PATH=${placeholder "out"}"
-  ];
+  makeFlags =
+    kernel.makeFlags
+    ++ [
+      "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+      "INSTALL_MOD_PATH=${placeholder "out"}"
+    ];
 
   # Apply NixOS-specific patches to make the driver work correctly
   postPatch = ''
@@ -41,6 +42,12 @@ stdenv.mkDerivation rec {
       --replace-fail '"fmacfw_8800d80_u02_ipc.bin"' '"aic8800D80/fmacfw_8800d80_u02_ipc.bin"' \
       --replace-fail '"fmacfw_8800d80_h_u02.bin"' '"aic8800D80/fmacfw_8800d80_h_u02.bin"' \
       --replace-fail '"fmacfw_8800d80_h_u02_ipc.bin"' '"aic8800D80/fmacfw_8800d80_h_u02_ipc.bin"'
+
+    # Patch 3: Fix in_irq() removed in kernel 6.19
+    # in_irq() was deprecated and replaced with in_hardirq() in 2020
+    # It was completely removed in kernel 6.19
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_rx.c \
+      --replace-fail 'in_irq()' 'in_hardirq()'
 
     echo "Patches applied successfully"
   '';
