@@ -71,6 +71,15 @@ stdenv.mkDerivation rec {
     substituteInPlace drivers/aic8800/aic8800_fdrv/aic_vendor.c \
       --replace-fail 'in_atomic()' 'in_hardirq()'
 
+    # Patch 6: Suppress upstream vendor driver warnings
+    # -Wmissing-prototypes: vendor code lacks forward declarations throughout
+    # -Wimplicit-fallthrough: EXTRA_CFLAGS not picked up in modern kernel build system
+    # -Woverflow/-Wunused-*: in BT code (aicbluetooth.c) which is not functional
+    echo 'ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations -Wno-implicit-fallthrough -Wno-attribute-warning' \
+      >> drivers/aic8800/aic8800_fdrv/Makefile
+    echo 'ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations -Wno-overflow -Wno-unused-variable -Wno-unused-function -Wno-implicit-fallthrough' \
+      >> drivers/aic8800/aic_load_fw/Makefile
+
     echo "Patches applied successfully"
   '';
 

@@ -25,3 +25,4 @@ modules.order
 
 # Other
 .DS_Store
+build.log
