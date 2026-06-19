@@ -49,6 +49,28 @@ stdenv.mkDerivation rec {
     substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_rx.c \
       --replace-fail 'in_irq()' 'in_hardirq()'
 
+    # Patch 4: Replace in_interrupt() removed in Linux 7.0
+    # in_interrupt() was removed. Use in_hardirq() for atomic context check
+    substituteInPlace drivers/aic8800/aic8800_fdrv/aic_br_ext.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_fw_dump.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_rx.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_tx.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic8800_fdrv/aicwf_txrxif.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic8800_fdrv/aicwf_usb.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+    substituteInPlace drivers/aic8800/aic_load_fw/aic_txrxif.c \
+      --replace-fail 'in_interrupt()' 'in_hardirq()'
+
+    # Patch 5: Replace in_atomic() removed in Linux 7.0
+    # in_atomic() was removed. Use in_hardirq() for atomic context
+    substituteInPlace drivers/aic8800/aic8800_fdrv/aic_vendor.c \
+      --replace-fail 'in_atomic()' 'in_hardirq()'
+
     echo "Patches applied successfully"
   '';
 

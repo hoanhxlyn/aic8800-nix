@@ -20,6 +20,10 @@ This driver supports USB WiFi adapters based on the AIC8800D80 chipset, includin
 
 ## NixOS Installation
 
+### Quick Start (with Cachix Binary Cache)
+
+This project provides pre-built binaries via Cachix, so you won't need to compile the driver from source. The cache is automatically configured in `flake.nix`.
+
 ### Method 1: Using Flakes (Recommended)
 
 Add this flake to your system configuration:
@@ -49,6 +53,8 @@ Then enable it in your `configuration.nix`:
   hardware.aic8800.enable = true;
 }
 ```
+
+**Note:** Binary cache from Cachix (`aic8800-nix.cachix.org`) is automatically configured. Substitutes will be used instead of building locally when available.
 
 ### Method 2: Local Installation
 
@@ -126,10 +132,12 @@ sudo modprobe aic8800_fdrv
 
 ### NixOS Patches
 
-This package includes patches to make the driver work with NixOS:
+This package includes patches to make the driver work with NixOS and newer kernels:
 
 1. **Firmware path fix**: Changes hardcoded `/lib/firmware` to `/run/current-system/firmware`
 2. **Firmware subdirectory**: Adds `aic8800D80/` prefix to firmware filenames for proper kernel firmware loading
+3. **Kernel 6.19+ compatibility**: Replaces deprecated `in_irq()` with `in_hardirq()`
+4. **Linux 7.0+ compatibility**: Replaces removed context macros (`in_interrupt()`, `in_atomic()`) with `in_hardirq()`
 
 ### Firmware Files
 
@@ -143,25 +151,33 @@ The driver requires firmware files in `/run/current-system/firmware/aic8800D80/`
 ### Kernel Compatibility
 
 Tested on:
+- Linux 7.0.x
 - Linux 6.12.x
 - Linux 6.11.x
 - Linux 6.10.x
 
-Should work on kernels 5.10+. May need adjustments for older or newer kernels.
+Should work on kernels 5.10+. Linux 7.0+ includes patches for removed context macros (`in_interrupt()`, `in_atomic()`).
 
 ## Development
 
 ### Building Locally
 
+Cachix binary cache is automatically configured. First build will use substitutes if available:
+
 ```bash
-# Build for default kernel
+# Build for default kernel (uses cache if available)
 nix build .#default
 
-# Build for latest kernel
+# Build for latest kernel (uses cache if available)
 nix build .#latest
 
 # Enter development shell
 nix develop
+```
+
+To force a local rebuild:
+```bash
+nix build .#default --rebuild
 ```
 
 ### Testing Changes
