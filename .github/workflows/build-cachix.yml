@@ -15,8 +15,8 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v14
+      - name: Cachix
+        uses: cachix/cachix-action@v17
         with:
           name: aic8800-nix
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
