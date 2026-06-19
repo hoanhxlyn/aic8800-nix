@@ -1,0 +1,34 @@
+name: Build and Push to Cachix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: aic8800-nix
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      - name: Build default kernel package
+        run: nix build .#default -L
+
+      - name: Build latest kernel package
+        run: nix build .#latest -L
+
+      - name: Push to Cachix
+        run: |
+          nix build .#default .#latest --json | jq -r '.[].outputs.out' | xargs -I {} cachix push aic8800-nix {}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'

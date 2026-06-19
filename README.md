@@ -158,17 +158,27 @@ Tested on:
 
 Should work on kernels 5.10+. Linux 7.0+ includes patches for removed context macros (`in_interrupt()`, `in_atomic()`).
 
+## Binary Cache (Cachix)
+
+This project uses Cachix for pre-built binaries. The cache is automatically configured in `flake.nix`.
+
+**Setup (maintainers only):**
+
+1. Create a Cachix cache: `cachix create aic8800-nix`
+2. Add `CACHIX_AUTH_TOKEN` secret to GitHub repository settings
+3. CI will automatically build and push to Cachix on commits to main branch (x86_64-linux only)
+
+Users on x86_64-linux get binary substitutes automatically from `aic8800-nix.cachix.org`. Other architectures will build locally.
+
 ## Development
 
 ### Building Locally
 
-Cachix binary cache is automatically configured. First build will use substitutes if available:
-
 ```bash
-# Build for default kernel (uses cache if available)
+# Build for default kernel
 nix build .#default
 
-# Build for latest kernel (uses cache if available)
+# Build for latest kernel
 nix build .#latest
 
 # Enter development shell
@@ -179,6 +189,8 @@ To force a local rebuild:
 ```bash
 nix build .#default --rebuild
 ```
+
+**CI automatically builds and caches for both x86_64-linux and aarch64-linux on push to main.**
 
 ### Testing Changes
 
