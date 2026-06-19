@@ -23,12 +23,14 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
       - name: Build default kernel package
-        run: nix build .#default -L
+        run: nix build .#default --accept-flake-config -L
 
       - name: Build latest kernel package
-        run: nix build .#latest -L
+        run: nix build .#latest --accept-flake-config -L
 
       - name: Push to Cachix
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          nix build .#default .#latest --json | jq -r '.[].outputs.out' | xargs -I {} cachix push aic8800-nix {}
+          nix build .#default .#latest --accept-flake-config --json | jq -r '.[].outputs.out' | xargs -I {} cachix push aic8800-nix {}
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
