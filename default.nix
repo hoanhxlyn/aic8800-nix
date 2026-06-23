@@ -71,7 +71,58 @@ stdenv.mkDerivation rec {
     substituteInPlace drivers/aic8800/aic8800_fdrv/aic_vendor.c \
       --replace-fail 'in_atomic()' 'in_hardirq()'
 
-    # Patch 6: Suppress upstream vendor driver warnings
+    # Patch 6: Fix stop_ap calling del_station_compat with net_device* instead of wireless_dev* (Linux 7.1)
+    # Linux 7.1 changed del_station cfg80211_op to take wireless_dev*, but stop_ap still receives net_device*
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_main.c \
+      --replace-fail \
+        '        rwnx_cfg80211_del_station_compat(wiphy, dev, NULL);' \
+        '#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+        rwnx_cfg80211_del_station_compat(wiphy, dev->ieee80211_ptr, NULL);
+#else
+        rwnx_cfg80211_del_station_compat(wiphy, dev, NULL);
+#endif'
+
+    # Patch 7: Fix TDLS discover_resp action_code member path (Linux 7.1)
+    # Linux 7.1 moved action_code from inside the union struct to the action level:
+    # OLD: mgmt->u.action.tdls_discover_resp.action_code  (wrong in 7.1 - no such member)
+    # NEW: mgmt->u.action.action_code                     (correct 7.1 path)
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_tdls.c \
+      --replace-fail \
+        '        mgmt->u.action.tdls_discover_resp.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;' \
+        '        mgmt->u.action.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;'
+
+    # Patch 8: Fix change_station TDLS path using dev (net_device*) when 7.1 provides wdev (wireless_dev*)
+    # The outer function correctly sets vif = container_of(wdev,...) for 7.1,
+    # but the inner TDLS branch still calls netdev_priv(dev) which is undefined in 7.1 branch
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_main.c \
+      --replace-fail \
+        '            struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+            struct me_sta_add_cfm me_sta_add_cfm;' \
+        '#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+            struct rwnx_vif *rwnx_vif = vif;
+#else
+            struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+#endif
+            struct me_sta_add_cfm me_sta_add_cfm;'
+
+    # Patch 9: Fix change_station missing dev declaration in 7.1 block
+    # The function gets wdev in 7.1 but never declares dev=wdev->netdev,
+    # so all uses of dev in the function body fail. Add it after vif.
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_main.c \
+      --replace-fail \
+        '    struct rwnx_vif *vif = container_of(wdev, struct rwnx_vif, wdev);
+#else
+    struct rwnx_vif *vif = netdev_priv(dev);
+#endif
+    struct rwnx_sta *sta;' \
+        '    struct rwnx_vif *vif = container_of(wdev, struct rwnx_vif, wdev);
+    struct net_device *dev = wdev->netdev;
+#else
+    struct rwnx_vif *vif = netdev_priv(dev);
+#endif
+    struct rwnx_sta *sta;'
+
+    # Patch 10: Suppress upstream vendor driver warnings
     # -Wmissing-prototypes: vendor code lacks forward declarations throughout
     # -Wimplicit-fallthrough: EXTRA_CFLAGS not picked up in modern kernel build system
     # -Woverflow/-Wunused-*: in BT code (aicbluetooth.c) which is not functional
