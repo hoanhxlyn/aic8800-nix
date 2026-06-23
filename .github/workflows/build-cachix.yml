@@ -23,5 +23,8 @@ jobs:
           pushFilter: "(-source$|-dev$|nixpkgs\\.tar\\.gz$)"
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
+      - name: Build default kernel package
+        run: nix build .#default --accept-flake-config -L
+
       - name: Build latest kernel package
         run: nix build .#latest --accept-flake-config -L
