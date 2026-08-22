@@ -122,7 +122,22 @@ stdenv.mkDerivation rec {
 #endif
     struct rwnx_sta *sta;'
 
-    # Patch 10: Suppress upstream vendor driver warnings
+    # Patch 10: strncpy() removed from kernel in 7.2 — compat shim added directly in rwnx_compat.h
+    # Patch 11: remain_on_channel gained const u8 *rx_addr param (Linux 7.2)
+    substituteInPlace drivers/aic8800/aic8800_fdrv/rwnx_main.c \
+      --replace-fail \
+        '                                unsigned int duration, u64 *cookie)
+{
+	return rwnx_cfg80211_remain_on_channel_(wiphy,' \
+        '                                unsigned int duration, u64 *cookie
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+                                , const u8 *rx_addr
+#endif
+                                )
+{
+	return rwnx_cfg80211_remain_on_channel_(wiphy,'
+
+    # Patch 12: Suppress upstream vendor driver warnings
     # -Wmissing-prototypes: vendor code lacks forward declarations throughout
     # -Wimplicit-fallthrough: EXTRA_CFLAGS not picked up in modern kernel build system
     # -Woverflow/-Wunused-*: in BT code (aicbluetooth.c) which is not functional

@@ -45,6 +45,23 @@
 #define IEEE80211_MAX_AMPDU_BUF IEEE80211_MAX_AMPDU_BUF_HE
 #endif
 
+/* strncpy() removed in Linux 7.2 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+#include <linux/string.h>
+static inline char *aic_strncpy(char *dest, const char *src, size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n && src[i]; i++)
+		dest[i] = src[i];
+	for (; i < n; i++)
+		dest[i] = '\0';
+
+	return dest;
+}
+#define strncpy aic_strncpy
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
 #define IEEE80211_RADIOTAP_HE 23
 #define IEEE80211_RADIOTAP_HE_MU 24
