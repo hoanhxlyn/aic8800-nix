@@ -4,6 +4,7 @@
   lib,
   stdenv,
   kernel,
+  kmodigest,
 }:
 stdenv.mkDerivation rec {
   pname = "aic8800-driver";
@@ -15,7 +16,7 @@ stdenv.mkDerivation rec {
     "pic"
     "format"
   ];
-  nativeBuildInputs = kernel.moduleBuildDependencies;
+  nativeBuildInputs = kernel.moduleBuildDependencies ++ [kmodigest];
 
   makeFlags =
     kernel.makeFlags
@@ -49,6 +50,12 @@ stdenv.mkDerivation rec {
        $out/lib/modules/${kernel.modDirVersion}/kernel/drivers/net/wireless/aic8800/
     cp aic8800_fdrv/aic8800_fdrv.ko \
        $out/lib/modules/${kernel.modDirVersion}/kernel/drivers/net/wireless/aic8800/
+
+    # Sign the modules and emit the per-module .ko.cer certificates that the
+    # nixpkgs module aggregator merges into modules.cer (Linux 7.3+)
+    for mod in $out/lib/modules/${kernel.modDirVersion}/kernel/drivers/net/wireless/aic8800/*.ko; do
+      ${kmodigest}/bin/kmodigest "$mod"
+    done
 
     # Install firmware files (uncompressed for the driver to load them)
     mkdir -p $out/lib/firmware
