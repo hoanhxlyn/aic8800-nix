@@ -176,7 +176,7 @@ enum aicbsp_cpmode_type {
 
 #define FW_PATH_MAX 200
 #if defined(CONFIG_PLATFORM_UBUNTU)
-static const char* aic_default_fw_path = "/lib/firmware";
+static const char* aic_default_fw_path = "/run/current-system/firmware";
 #else
 static const char* aic_default_fw_path = "/vendor/etc/firmware";
 #endif

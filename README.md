@@ -130,14 +130,14 @@ sudo modprobe aic8800_fdrv
 
 ## Technical Details
 
-### NixOS Patches
+### Source-Level Compatibility
 
-This package includes patches to make the driver work with NixOS and newer kernels:
+All NixOS and kernel fixes are applied directly in the driver source — there is no patching step in the Nix build:
 
-1. **Firmware path fix**: Changes hardcoded `/lib/firmware` to `/run/current-system/firmware`
-2. **Firmware subdirectory**: Adds `aic8800D80/` prefix to firmware filenames for proper kernel firmware loading
-3. **Kernel 6.19+ compatibility**: Replaces deprecated `in_irq()` with `in_hardirq()`
-4. **Linux 7.0+ compatibility**: Replaces removed context macros (`in_interrupt()`, `in_atomic()`) with `in_hardirq()`
+1. **Firmware path fix**: Hardcoded `/lib/firmware` replaced with `/run/current-system/firmware`
+2. **Firmware subdirectory**: Firmware filenames carry the `aic8800D80/` prefix for proper kernel firmware loading
+3. **Removed context macros**: `in_irq()` / `in_interrupt()` / `in_atomic()` replaced with `in_hardirq()`
+4. **Linux 7.x API adaptations**: cfg80211 `wireless_dev*` callbacks (7.1), `remain_on_channel` `rx_addr` parameter (7.2), by-value RoC/mgmt-TX cookies and the `link_id` argument of `cfg80211_probe_status()` (7.3)
 
 ### Firmware Files
 
@@ -150,13 +150,11 @@ The driver requires firmware files in `/run/current-system/firmware/aic8800D80/`
 
 ### Kernel Compatibility
 
-Tested on:
-- Linux 7.0.x
-- Linux 6.12.x
-- Linux 6.11.x
-- Linux 6.10.x
+**Requires Linux 7.0 or newer.** 6.x and older kernels are no longer supported.
 
-Should work on kernels 5.10+. Linux 7.0+ includes patches for removed context macros (`in_interrupt()`, `in_atomic()`).
+Tested on:
+- Linux 7.2.x
+- Linux 7.3-rc
 
 ## Binary Cache (Cachix)
 
@@ -175,10 +173,10 @@ Users on x86_64-linux get binary substitutes automatically from `aic8800-nix.cac
 ### Building Locally
 
 ```bash
-# Build for default kernel
+# Build for the latest kernel (Linux 7.x)
 nix build .#default
 
-# Build for latest kernel
+# Alias for .#default
 nix build .#latest
 
 # Enter development shell

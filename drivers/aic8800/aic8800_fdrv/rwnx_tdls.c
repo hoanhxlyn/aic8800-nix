@@ -118,7 +118,7 @@ rwnx_prep_tdls_direct(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
         skb_put(skb, 1 + sizeof(mgmt->u.action.tdls_discover_resp));
         mgmt->u.action.category = WLAN_CATEGORY_PUBLIC;
-        mgmt->u.action.tdls_discover_resp.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;
+        mgmt->u.action.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;
         mgmt->u.action.tdls_discover_resp.dialog_token = dialog_token;
         mgmt->u.action.tdls_discover_resp.capability =
             cpu_to_le16(rwnx_get_tdls_sta_capab(rwnx_vif, status_code));
@@ -769,16 +769,16 @@ rwnx_tdls_send_mgmt_packet_data(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_v
                       initiator, extra_ies, extra_ies_len, oper_class, chandef);
 
     if (action_code == WLAN_PUB_ACTION_TDLS_DISCOVER_RES) {
-        u64 cookie;
-        #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+        u64 cookie = 0;
         struct cfg80211_mgmt_tx_params params;
 
         params.len = skb->len;
         params.buf = skb->data;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+        ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, &params, false, cookie);
+#else
         ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, &params, false, &cookie);
-        #else
-        ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, NULL, false, 0, skb->data, skb->len, false, false, &cookie);
-        #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+#endif
 
         return ret;
     }

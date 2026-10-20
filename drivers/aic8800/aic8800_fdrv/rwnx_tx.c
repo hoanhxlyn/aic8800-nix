@@ -1143,7 +1143,7 @@ int aic_br_client_tx(struct rwnx_vif *vif, struct sk_buff **pskb)
 						*((unsigned short *)(skb->data + MACADDRLEN * 2 + 2)) = vlan_hdr;
 					}
 
-					newskb = skb_copy(skb, in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+					newskb = skb_copy(skb, in_hardirq() ? GFP_ATOMIC : GFP_KERNEL);
 					if (newskb == NULL) {
 						/* priv->ext_stats.tx_drops++; */
 						printk("TX DROP: skb_copy fail!\n");
@@ -1635,22 +1635,13 @@ free:
  */
 
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
                          struct cfg80211_mgmt_tx_params *params, bool offchan,
-                         u64 *cookie)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+                         u64 cookie)
 #else
-int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
-                         struct ieee80211_channel *channel, bool offchan,
-                         unsigned int wait, const u8* buf, size_t len,
-                    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
-                         bool no_cck,
-                    #endif
-                    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0))
-                         bool dont_wait_for_ack,
-                    #endif
                          u64 *cookie)
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+#endif
 {
     struct rwnx_hw *rwnx_hw = vif->rwnx_hw;
     struct rwnx_txhdr *txhdr;
@@ -1662,11 +1653,9 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     int nx_off_chan_txq_idx = NX_OFF_CHAN_TXQ_IDX;
     struct rwnx_txq *txq;
     bool robust;
-    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
     const u8 *buf = params->buf;
     size_t len = params->len;
     bool no_cck = params->no_cck;
-    #endif
     headroom = sizeof(struct rwnx_txhdr);
     frame_len = len;
 
@@ -1703,7 +1692,9 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
         return -ENOMEM;
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 3, 0)
     *cookie = (unsigned long)skb;
+#endif
 
     /*
      * Move skb->data pointer in order to reserve room for rwnx_txhdr
@@ -1719,16 +1710,8 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     /* Copy the provided data */
     memcpy(data, buf, frame_len);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
     robust = ieee80211_is_robust_mgmt_frame(skb);
-#else
-	if (skb->len < 25){
-		robust = false;
-	}
-	robust = ieee80211_is_robust_mgmt_frame((void *)skb->data);
-#endif
 
-    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
     /* Update CSA counter if present */
     if (unlikely(params->n_csa_offsets) &&
         vif->wdev.iftype == NL80211_IFTYPE_AP &&
@@ -1740,7 +1723,6 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
             data[params->csa_offsets[i]] = vif->ap.csa->count;
         }
     }
-    #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
 
     /*
      * Go back to the beginning of the allocated data area
@@ -1773,6 +1755,11 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     sw_txhdr->rwnx_sta = sta;
     sw_txhdr->rwnx_vif = vif;
     sw_txhdr->skb = skb;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+    sw_txhdr->cookie = cookie;
+#else
+    sw_txhdr->cookie = (unsigned long)skb;
+#endif
     sw_txhdr->headroom = headroom;
     sw_txhdr->map_len = skb->len - offsetof(struct rwnx_txhdr, hw_hdr);
 #ifdef CONFIG_RWNX_AMSDUS_TX
@@ -2386,7 +2373,7 @@ int rwnx_txdatacfm(void *pthis, void *host_id)
 #endif
         /* Confirm transmission to CFG80211 */
         cfg80211_mgmt_tx_status(&sw_txhdr->rwnx_vif->wdev,
-                                (unsigned long)skb,
+                                sw_txhdr->cookie,
                                 (skb->data + sw_txhdr->headroom),
                                 sw_txhdr->frame_len,
                                 rwnx_txst.acknowledged,

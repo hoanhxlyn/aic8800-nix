@@ -1,5 +1,7 @@
 EXTRA_CFLAGS += $(USER_EXTRA_CFLAGS)
 EXTRA_CFLAGS += -Wno-implicit-fallthrough
+# Upstream vendor code lacks prototypes/fallthrough annotations; keep the build warning-clean
+ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations -Wno-implicit-fallthrough -Wno-attribute-warning
 #EXTRA_CFLAGS += -Wno-unused-variable
 
 RWNX_VERS_NUM := 6.4.3.0

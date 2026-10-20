@@ -5,10 +5,9 @@
   lib,
   pkgs,
   ...
-}:
-
-let
-  inherit (lib)
+}: let
+  inherit
+    (lib)
     mkEnableOption
     mkOption
     mkIf
@@ -18,10 +17,8 @@ let
   cfg = config.hardware.aic8800;
 
   # Build the driver package for the current kernel
-  aic8800-driver = config.boot.kernelPackages.callPackage ./default.nix { };
-
-in
-{
+  aic8800-driver = config.boot.kernelPackages.callPackage ./default.nix {};
+in {
   options.hardware.aic8800 = {
     enable = mkEnableOption (
       lib.mdDoc ''
@@ -58,13 +55,13 @@ in
 
   config = mkIf cfg.enable {
     # Add the driver kernel module package
-    boot.extraModulePackages = [ cfg.package ];
+    boot.extraModulePackages = [cfg.package];
 
     # Automatically load the module if enabled
-    boot.kernelModules = mkIf cfg.autoload [ "aic8800_fdrv" ];
+    boot.kernelModules = mkIf cfg.autoload ["aic8800_fdrv"];
 
     # Install firmware files to /run/current-system/firmware/
-    hardware.firmware = [ cfg.package ];
+    hardware.firmware = [cfg.package];
 
     # Add udev rules for proper USB device permissions
     # This ensures the driver can access the USB device without root
@@ -85,7 +82,14 @@ in
     # Helpful assertions
     assertions = [
       {
-        assertion = config.hardware.enableRedistributableFirmware || config.hardware.firmware != [ ];
+        assertion = lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.0";
+        message = ''
+          hardware.aic8800 requires Linux 7.0 or newer.
+          This driver no longer supports 6.x kernels.
+        '';
+      }
+      {
+        assertion = config.hardware.enableRedistributableFirmware || config.hardware.firmware != [];
         message = ''
           AIC8800 driver requires firmware files to be enabled.
           Consider setting: hardware.enableRedistributableFirmware = true;
@@ -95,6 +99,6 @@ in
   };
 
   meta = {
-    maintainers = with lib.maintainers; [ ];
+    maintainers = with lib.maintainers; [];
   };
 }

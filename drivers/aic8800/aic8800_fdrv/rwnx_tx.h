@@ -129,6 +129,8 @@ struct rwnx_sw_txhdr {
 #endif
 	u32 need_cfm;
     struct sk_buff *skb;
+    /* cfg80211 cookie for this mgmt frame (given by cfg80211 in 7.3+) */
+    u64 cookie;
 
     size_t map_len;
     dma_addr_t dma_addr;
@@ -154,22 +156,13 @@ struct rwnx_txhdr {
 
 u16 rwnx_select_txq(struct rwnx_vif *rwnx_vif, struct sk_buff *skb);
 netdev_tx_t rwnx_start_xmit(struct sk_buff *skb, struct net_device *dev);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
                          struct cfg80211_mgmt_tx_params *params, bool offchan,
-                         u64 *cookie);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+                         u64 cookie);
 #else
-int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
-                         struct ieee80211_channel *channel, bool offchan,
-                         unsigned int wait, const u8* buf, size_t len,
-                    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
-                         bool no_cck,
-                    #endif
-                    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0))
-                         bool dont_wait_for_ack,
-                    #endif
                          u64 *cookie);
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+#endif
 #ifdef CONFIG_RWNX_MON_XMIT
 int rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *dev);
 #endif

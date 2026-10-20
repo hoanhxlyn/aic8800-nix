@@ -31,10 +31,10 @@
       system: let
         pkgs = nixpkgsFor system;
       in {
-        # Default package: driver for the default kernel
-        default = pkgs.linuxPackages.callPackage ./default.nix {};
+        # Driver for the newest kernel (Linux 7.x only)
+        default = pkgs.linuxPackages_latest.callPackage ./default.nix {};
 
-        # Also provide driver for latest kernel
+        # Alias kept for compatibility
         latest = pkgs.linuxPackages_latest.callPackage ./default.nix {};
       }
     );
@@ -60,7 +60,7 @@
             pkg-config
 
             # For testing
-            linuxPackages.kernel.dev
+            linuxPackages_latest.kernel.dev
             kmod
 
             # Useful tools
@@ -73,11 +73,11 @@
             echo "=============================================="
             echo ""
             echo "Available commands:"
-            echo "  nix build .#default         - Build driver for default kernel"
-            echo "  nix build .#latest          - Build driver for latest kernel"
+            echo "  nix build .#default         - Build driver for the latest kernel"
+            echo "  nix build .#latest          - Same as .#default"
             echo "  nixos-rebuild switch        - Install on NixOS"
             echo ""
-            echo "Kernel version: ${pkgs.linuxPackages.kernel.version}"
+            echo "Kernel version: ${pkgs.linuxPackages_latest.kernel.version}"
           '';
         };
       }

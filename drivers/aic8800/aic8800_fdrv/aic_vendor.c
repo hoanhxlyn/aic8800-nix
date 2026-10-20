@@ -101,7 +101,7 @@ static int aicwf_vendor_start_mkeep_alive(struct wiphy *wiphy, struct wireless_d
 	const struct nlattr *iter;
 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
 	struct rwnx_vif *rwnx_vif = container_of(wdev, struct rwnx_vif, wdev);
-	gfp_t kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	gfp_t kflags = in_hardirq() ? GFP_ATOMIC : GFP_KERNEL;
 	printk("%s\n", __func__);
 
 	nla_for_each_attr(iter, data, len, rem) {

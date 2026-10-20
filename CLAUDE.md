@@ -18,10 +18,10 @@ This is a Linux kernel driver for the **AIC8800D80 WiFi 6 chipset**, packaged an
 # Enter development environment
 nix develop
 
-# Build for default kernel
+# Build for the latest kernel (Linux 7.x)
 nix build .#default
 
-# Build for latest kernel
+# Same as .#default
 nix build .#latest
 
 # Format Nix files
@@ -38,7 +38,7 @@ sudo reboot
 The project uses **Nix flakes** to manage kernel module builds:
 - `flake.nix` defines outputs for x86_64-linux and aarch64-linux
 - `default.nix` provides `stdenv.mkDerivation` for the kernel module
-- Kernel modules are built against `linuxPackages` and `linuxPackages_latest`
+- Kernel modules are built against `linuxPackages_latest` (Linux 7.x only)
 
 ### Kernel Modules
 Two kernel modules are compiled from `drivers/aic8800/`:
@@ -63,52 +63,47 @@ Firmware files are located in `fw/aic8800D80/` and `fw/aic8800DC/`:
 - Auto-installs firmware and applies udev rules for USB device access
 - Supports vendor IDs: 3020, 368b, a69c
 
-## Key Patches Applied
+## Source-Level Fixes
 
-All patches are applied in `default.nix` postPatch phase:
+All NixOS and kernel compatibility fixes live directly in `drivers/aic8800/`.
+`default.nix` is a plain build recipe with no patching phase — edit the C code,
+never add `substituteInPlace` hacks.
 
 ### 1. Firmware Path Fix (aicbluetooth.c)
-Changes hardcoded `/lib/firmware` → `/run/current-system/firmware` because NixOS manages firmware differently.
+Hardcoded `/lib/firmware` → `/run/current-system/firmware` because NixOS manages firmware differently.
 
 ### 2. Firmware Subdirectory Prefix (aic_compat_8800d80.h)
-Adds `aic8800D80/` prefix to all firmware filenames:
-- `"fmacfw_8800d80_u02.bin"` → `"aic8800D80/fmacfw_8800d80_u02.bin"`
-- Similar for `_ipc`, `_h`, and `_h_ipc` variants
+Firmware filenames carry the `aic8800D80/` prefix (`fmacfw_8800d80_u02.bin` and the `_ipc`/`_h`/`_h_ipc` variants), because the kernel firmware loader organizes files by chipset subdirectory.
 
-This is required because kernel firmware loader organizes files by chipset subdirectory.
+### 3. Removed Context Macros
+`in_irq()` / `in_interrupt()` / `in_atomic()` replaced with `in_hardirq()`.
 
-### 3. Kernel 6.19+ Compatibility (rwnx_rx.c)
-Replaces deprecated `in_irq()` → `in_hardirq()`. The `in_irq()` macro was completely removed in kernel 6.19.
-
-### 4. Linux 7.0+ Compatibility
-Replaces removed context macros:
-- `in_interrupt()` → `in_hardirq()` (7 files)
-- `in_atomic()` → `in_hardirq()` (aic_vendor.c)
-
-Linux 7.0 removed these macros. `in_hardirq()` covers atomic contexts reliably.
+### 4. Linux 7.x cfg80211 API Adaptations
+- 7.1: `cfg80211` callbacks take `wireless_dev*` instead of `net_device*` (guarded with `LINUX_VERSION_CODE`)
+- 7.2: `remain_on_channel` gained a `const u8 *rx_addr` parameter
+- 7.3: `cfg80211_ops::probe_client` was removed (guarded out); `cfg80211_probe_status()` gained a `link_id` arg (passed as `-1`); `remain_on_channel`/`mgmt_tx` cookies are now by-value `u64` — the given cookie is stored (`rwnx_roc_elem.cookie` / `rwnx_sw_txhdr.cookie`) and reported back in the RoC/mgmt-TX events
 
 ## Kernel Compatibility
 
-- **Tested:** Linux 7.0.x, 6.12.x, 6.11.x, 6.10.x
-- **Expected to work:** Kernels 5.10+ (may need version-specific patches for older/newer kernels)
+- **Requires Linux 7.0 or newer** — 6.x and older are not supported
+- **Tested:** Linux 7.2.x, 7.3-rc
 - When changing to newer kernels, watch for:
   - Function signature changes in kernel headers
-  - Removal/renaming of kernel APIs (like `in_irq()`, `in_interrupt()`, `in_atomic()`)
-  - Changes to USB or wireless subsystem interfaces
+  - Removal/renaming of kernel APIs
+  - Changes to cfg80211 op signatures (cookies, `wdev` vs `net_device`)
 
 ## Important Notes
 
 - **Bluetooth**: Not currently supported (driver only provides WiFi)
 - **Firmware Required**: The driver will not function without firmware files—the module loading will fail if firmware is missing
-- **Multiple Kernel Support**: Flake supports both default and latest kernel; default matches system kernel, latest follows nixpkgs-unstable
+- **Kernel requirement**: `module.nix` asserts Linux ≥ 7.0 at evaluation time
 - **Testing**: After changes, rebuild and reboot to test actual driver behavior in kernel
 
 ## Modifying the Driver
 
-1. **Source code changes**: Edit files in `drivers/aic8800/` (pure C/Makefile)
-2. **Kernel compatibility patches**: Add to `postPatch` in `default.nix` using `substituteInPlace`
-3. **NixOS integration**: Modify `module.nix` to add new options or change module behavior
-4. **Firmware issues**: Only modify `aicwf_compat_8800d80.h` for firmware path changes
+1. **Source code changes**: Edit files in `drivers/aic8800/` (pure C/Makefile) — this is where all kernel compat lives too
+2. **NixOS integration**: Modify `module.nix` to add new options or change module behavior
+3. **Firmware issues**: Only modify `aic_compat_8800d80.h` for firmware path changes
 
 After changes, test with:
 ```bash

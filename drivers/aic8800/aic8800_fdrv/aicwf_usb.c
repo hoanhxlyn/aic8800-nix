@@ -1590,9 +1590,9 @@ static int aicwf_usb_alloc_tx_urb(struct aic_usb_dev *usb_dev)
         #if defined CONFIG_USB_NO_TRANS_DMA_MAP
         // alloc dma buf
         #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
-        usb_buf->data_buf = usb_alloc_coherent(usb_dev->udev, DATA_BUF_MAX, (in_interrupt() ? GFP_ATOMIC : GFP_KERNEL), &usb_buf->data_dma_trans_addr);
+        usb_buf->data_buf = usb_alloc_coherent(usb_dev->udev, DATA_BUF_MAX, (in_hardirq() ? GFP_ATOMIC : GFP_KERNEL), &usb_buf->data_dma_trans_addr);
         #else
-        usb_buf->data_buf = usb_buffer_alloc(usb_dev->udev, DATA_BUF_MAX, (in_interrupt() ? GFP_ATOMIC : GFP_KERNEL), &usb_buf->data_dma_trans_addr);
+        usb_buf->data_buf = usb_buffer_alloc(usb_dev->udev, DATA_BUF_MAX, (in_hardirq() ? GFP_ATOMIC : GFP_KERNEL), &usb_buf->data_dma_trans_addr);
         #endif
         if (usb_buf->data_buf == NULL) {
             usb_err("could not allocate tx data dma buf\n");
@@ -2721,7 +2721,7 @@ void aicwf_usb_exit(void)
     int retry = 5;
     AICWFDBG(LOGINFO, "%s Enter\r\n", __func__);
 
-    AICWFDBG(LOGDEBUG, "%s in_interrupt:%d in_softirq:%d in_atomic:%d\r\n", __func__, (int)in_interrupt(), (int)in_softirq(), (int)in_atomic());
+    AICWFDBG(LOGDEBUG, "%s in_interrupt:%d in_softirq:%d in_atomic:%d\r\n", __func__, (int)in_hardirq(), (int)in_softirq(), (int)in_atomic());
 
     do{
         AICWFDBG(LOGINFO, "aicwf_deinit_atomic is busy. waiting for 500ms retry:%d \r\n",

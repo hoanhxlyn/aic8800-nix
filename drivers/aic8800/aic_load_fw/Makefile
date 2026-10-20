@@ -2,6 +2,8 @@ CONFIG_USB_SUPPORT =y
 CONFIG_RFTEST =y
 CONFIG_USB_BT =y
 CONFIG_USB_MSG_EP = y
+# Upstream vendor code lacks prototypes; keep the build warning-clean
+ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations -Wno-overflow -Wno-unused-variable -Wno-unused-function -Wno-implicit-fallthrough
 CONFIG_USB_NO_TRANS_DMA_MAP = n
 CONFIG_M2D_OTA_AUTO_SUPPORT = n
 CONFIG_LINK_DET_5G = y

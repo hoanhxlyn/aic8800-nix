@@ -487,7 +487,7 @@ static void __nat25_db_network_insert(struct rwnx_vif *vif,
 		db = db->next_hash;
 	}
 
-	db = (struct nat25_network_db_entry *)kmalloc(sizeof(*db), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+	db = (struct nat25_network_db_entry *)kmalloc(sizeof(*db), in_hardirq() ? GFP_ATOMIC : GFP_KERNEL);
 	if (db == NULL) {
 		spin_unlock_bh(&vif->br_ext_lock);
 		return;

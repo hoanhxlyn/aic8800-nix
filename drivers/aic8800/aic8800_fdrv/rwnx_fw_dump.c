@@ -475,7 +475,7 @@ int rwnx_um_helper(struct rwnx_debugfs *rwnx_debugfs, const char *cmd)
     if (!rwnx_debugfs->dir ||
         !strlen((cmd = cmd ? cmd : rwnx_debugfs->helper_cmd)))
         return 0;
-    argv = argv_split(in_interrupt() ? GFP_ATOMIC : GFP_KERNEL, cmd, &argc);
+    argv = argv_split(in_hardirq() ? GFP_ATOMIC : GFP_KERNEL, cmd, &argc);
     if (!argc)
         return PTR_ERR(argv);
 
