@@ -168,6 +168,10 @@ This project uses Cachix for pre-built binaries. The cache is automatically conf
 
 Users on x86_64-linux get binary substitutes automatically from `aic8800-nix.cachix.org`. Other architectures will build locally.
 
+### Automatic nixpkgs updates
+
+A scheduled GitHub Action (`update-nixpkgs.yml`) runs weekly: it bumps the `nixpkgs` flake input, verifies the driver still builds, and only then commits `flake.lock` and pushes the result to Cachix. If a new kernel breaks the build, the lock stays untouched until it compiles again.
+
 ## Development
 
 ### Building Locally

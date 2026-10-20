@@ -1,0 +1,52 @@
+name: Update nixpkgs
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v23
+
+      - name: Update nixpkgs input
+        id: update
+        run: |
+          nix flake update nixpkgs
+          if git diff --quiet flake.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "nixpkgs is already up to date"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Set up Cachix before building so the build below gets captured and pushed
+      - name: Cachix
+        if: steps.update.outputs.changed == 'true'
+        uses: cachix/cachix-action@v17
+        with:
+          name: aic8800-nix
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          pushFilter: "(-source$|-dev$|nixpkgs\\.tar\\.gz$)"
+
+      # Gate: only commit the lock if the driver still builds against the new nixpkgs
+      - name: Build driver
+        if: steps.update.outputs.changed == 'true'
+        run: nix build .#default --accept-flake-config -L
+
+      - name: Commit and push flake.lock
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock
+          git commit -m "chore: update nixpkgs flake.lock"
+          git push
